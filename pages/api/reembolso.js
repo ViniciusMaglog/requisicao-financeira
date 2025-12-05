@@ -10,105 +10,117 @@ export const config = {
 };
 
 const generatePDFBuffer = (fields, tableRows) => {
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const dataEmissao = new Date().toLocaleDateString('pt-BR');
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const dataEmissao = new Date().toLocaleDateString('pt-BR');
 
-    // --- CABEÇALHO ---
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    
-    const titulo = fields.tipo_solicitacao === 'reembolso' 
-        ? "REEMBOLSO DE DESPESAS" 
-        : "SOLICITAÇÃO DE PAGAMENTO";
-        
-    doc.text(titulo, 148, 20, { align: "center" });
-    
-    doc.setLineWidth(0.5);
-    doc.line(10, 25, 286, 25); 
+  // --- CABEÇALHO ---
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
 
-    // --- DADOS GERAIS ---
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    
-    let y = 35;
-    const col1 = 15;
-    const col2 = 150;
+  const titulo = fields.tipo_solicitacao === 'reembolso'
+    ? "REEMBOLSO DE DESPESAS"
+    : "SOLICITAÇÃO DE PAGAMENTO";
 
-    doc.text(`Solicitante: ${fields.solicitante}`, col1, y);
-    doc.text(`Data: ${fields.data_solicitacao}`, col2, y);
-    y += 7;
-    doc.text(`Beneficiado: ${fields.beneficiado}`, col1, y);
-    y += 7;
-    doc.text(`Departamento: ${fields.departamento}`, col1, y);
-    y += 7;
-    doc.text(`CPF/CNPJ: ${fields.cpf_cnpj}`, col1, y);
-    
-    y += 10;
-    doc.setFont("helvetica", "bold");
-    doc.text("DADOS BANCÁRIOS / PIX", col1, y);
-    y += 6;
-    doc.setFont("helvetica", "normal");
-    doc.text(`Banco: ${fields.banco || '-'}`, col1, y);
-    doc.text(`Agência: ${fields.agencia || '-'}`, col1 + 60, y);
-    doc.text(`C/C: ${fields.conta || '-'}`, col1 + 100, y);
-    y += 6;
-    doc.text(`Chave PIX: ${fields.pix || '-'}`, col1, y);
+  doc.text(titulo, 148, 20, { align: "center" });
 
-    y += 10;
-    doc.text(`Nível de Urgência: ${fields.urgencia.toUpperCase()}`, col1, y);
-    doc.text(`Data para Pagamento: ${fields.data_pagamento}`, col2, y);
+  doc.setLineWidth(0.5);
+  doc.line(10, 25, 286, 25);
 
-    // --- TABELA DE GASTOS ---
-    const head = [['Data', 'Detalhe', 'Tipo', 'Valor (R$)', 'Km', 'Val. Km', 'Total Km', 'TOTAL', 'Cobrar Cliente']];
-    
-    const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+  // --- DADOS GERAIS ---
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
 
-    const body = tableRows.map(row => [
-        row.data,
-        row.detalhe,
-        row.tipo,
-        fmt(row.valor_despesa),
-        row.km_rodado || '-',
-        fmt(row.valor_unit_km),
-        fmt(row.total_km),
-        fmt(row.total_gasto), 
-        // Lógica nova para exibir o nome do cliente no PDF
-        row.cobrar_cliente === 'true' ? `SIM\n(${row.nome_cliente})` : 'NÃO'
-    ]);
+  let y = 35;
+  const col1 = 15;
+  const col2 = 150;
 
-    const totalGeral = tableRows.reduce((acc, row) => acc + parseFloat(row.total_gasto || 0), 0);
-    body.push(['', '', '', '', '', '', 'TOTAL GERAL:', fmt(totalGeral), '']);
+  doc.text(`Solicitante: ${fields.solicitante}`, col1, y);
+  doc.text(`Data: ${fields.data_solicitacao}`, col2, y);
+  y += 7;
+  doc.text(`Beneficiado: ${fields.beneficiado}`, col1, y);
+  y += 7;
+  doc.text(`Departamento: ${fields.departamento}`, col1, y);
+  y += 7;
+  doc.text(`CPF/CNPJ: ${fields.cpf_cnpj}`, col1, y);
 
-    autoTable(doc, {
-        startY: y + 10,
-        head: head,
-        body: body,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 78, 99], textColor: 255 },
-        columnStyles: {
-            7: { fontStyle: 'bold', fillColor: [240, 240, 240] },
-            8: { fontSize: 7 } // Diminui a fonte da coluna cliente para caber o nome
-        },
-        styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
-    });
+  y += 10;
+  doc.setFont("helvetica", "bold");
+  doc.text("DADOS BANCÁRIOS / PIX", col1, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Banco: ${fields.banco || '-'}`, col1, y);
+  doc.text(`Agência: ${fields.agencia || '-'}`, col1 + 60, y);
+  doc.text(`C/C: ${fields.conta || '-'}`, col1 + 100, y);
+  y += 6;
+  doc.text(`Chave PIX: ${fields.pix || '-'}`, col1, y);
 
-    let finalY = doc.lastAutoTable.finalY + 10;
+  y += 10;
+  doc.text(`Nível de Urgência: ${fields.urgencia.toUpperCase()}`, col1, y);
+  doc.text(`Data para Pagamento: ${fields.data_pagamento}`, col2, y);
 
-    // --- TERMO ---
+  // --- TABELA DE GASTOS ---
+  const head = [['Data', 'Detalhe', 'Tipo', 'Valor (R$)', 'Km', 'Val. Km', 'Total Km', 'TOTAL', 'Cobrar Cliente']];
+
+  const fmt = (v) => parseFloat(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+  const body = tableRows.map(row => [
+    row.data,
+    // Ponto 2: Uso do splitTextToSize para forçar a quebra de linha no Detalhe (ajuste para 45mm de largura)
+    doc.splitTextToSize(row.detalhe, 45),
+    row.tipo,
+    fmt(row.valor_despesa),
+    row.km_rodado || '-',
+    fmt(row.valor_unit_km),
+    fmt(row.total_km),
+    fmt(row.total_gasto),
+    row.cobrar_cliente === 'true' ? `SIM\n(${row.nome_cliente})` : 'NÃO'
+  ]);
+
+  const totalGeral = tableRows.reduce((acc, row) => acc + parseFloat(row.total_gasto || 0), 0);
+  body.push(['', '', '', '', '', '', 'TOTAL GERAL:', fmt(totalGeral), '']);
+
+  autoTable(doc, {
+    startY: y + 10,
+    head: head,
+    body: body,
+    theme: 'grid',
+    headStyles: { fillColor: [22, 78, 99], textColor: 255 },
+    columnStyles: {
+      // Ponto 2: Definição de larguras fixas para evitar desconfiguração
+      0: { cellWidth: 20 },
+      1: { cellWidth: 45 }, // Largura para Detalhe com quebra de linha
+      2: { cellWidth: 35 },
+      3: { cellWidth: 25, halign: 'right' },
+      4: { cellWidth: 15, halign: 'center' },
+      5: { cellWidth: 20, halign: 'right' },
+      6: { cellWidth: 25, halign: 'right' },
+      7: { fontStyle: 'bold', fillColor: [240, 240, 240], cellWidth: 25, halign: 'right' },
+      8: { fontSize: 7, cellWidth: 30 }
+    },
+    styles: { fontSize: 8, cellPadding: 2, valign: 'middle' },
+  });
+
+  let finalY = doc.lastAutoTable.finalY + 10;
+
+  // --- TERMO (Ponto 1) ---
+  // NOVO: Exibe o termo CLT apenas se for 'solicitação de pagamento'
+  if (fields.tipo_solicitacao === 'pagamento') {
     doc.setFontSize(8);
     doc.setTextColor(200, 0, 0);
     const termo = "(*) Declaro que caso não preste as contas devidas no prazo de 30(trinta) dias contados a partir da presente data ou no mesmo prazo haja saldo devedor em aberto, fica autorizado o desconto do valor devido em folha de pagamento ou no Termo de Rescisão do Contrato de Trabalho, conforme artigo 462 da CLT.";
     const splitTermo = doc.splitTextToSize(termo, 270);
     doc.text(splitTermo, 15, finalY);
+    finalY += 10; // Adiciona espaço após o termo, se ele foi incluído
+  }
 
-    // --- ASSINATURA ---
-    finalY += 30;
-    doc.setDrawColor(0);
-    doc.setTextColor(0);
-    doc.line(100, finalY, 196, finalY);
-    doc.text("Assinatura do Solicitante / Aprovador", 148, finalY + 5, { align: "center" });
+  // --- ASSINATURA ---
+  finalY += 30;
+  doc.setDrawColor(0);
+  doc.setTextColor(0);
+  doc.line(100, finalY, 196, finalY);
+  doc.text("Assinatura do Solicitante / Aprovador", 148, finalY + 5, { align: "center" });
 
-    return Buffer.from(doc.output('arraybuffer'));
+  return Buffer.from(doc.output('arraybuffer'));
 };
 
 async function enviarNotificacaoDiscord(fields, total) {
@@ -137,9 +149,9 @@ async function enviarNotificacaoDiscord(fields, total) {
 
   try {
     await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
   } catch (error) { console.error(error); }
 }
@@ -158,20 +170,25 @@ export default async function handler(req, res) {
     });
 
     const getVal = (v) => Array.isArray(v) ? v[0] : v;
-    
+
     const dados = {
-        tipo_solicitacao: getVal(fields.tipo_solicitacao),
-        solicitante: getVal(fields.solicitante),
-        data_solicitacao: getVal(fields.data_solicitacao),
-        beneficiado: getVal(fields.beneficiado),
-        departamento: getVal(fields.departamento),
-        cpf_cnpj: getVal(fields.cpf_cnpj),
-        banco: getVal(fields.banco),
-        agencia: getVal(fields.agencia),
-        conta: getVal(fields.conta),
-        pix: getVal(fields.pix),
-        urgencia: getVal(fields.urgencia),
-        data_pagamento: getVal(fields.data_pagamento),
+      tipo_solicitacao: getVal(fields.tipo_solicitacao),
+      // ... (restante dos campos inalterados)
+      solicitante: getVal(fields.solicitante),
+      data_solicitacao: getVal(fields.data_solicitacao),
+      beneficiado: getVal(fields.beneficiado),
+      departamento: getVal(fields.departamento),
+      cpf_cnpj: getVal(fields.cpf_cnpj),
+      banco: getVal(fields.banco),
+      agencia: getVal(fields.agencia),
+      conta: getVal(fields.conta),
+      pix: getVal(fields.pix),
+      urgencia: getVal(fields.urgencia),
+      data_pagamento: getVal(fields.data_pagamento),
+      email_gestor: getVal(fields.email_gestor),
+      // O campo 'concordo' é validado no frontend e não é estritamente necessário na API se não for usado.
+      // Se precisar validar aqui:
+      // concordo: getVal(fields.concordo), 
     };
 
     const tableRows = [];
@@ -179,58 +196,59 @@ export default async function handler(req, res) {
     let totalGeral = 0;
 
     for (let i = 0; i < rowCount; i++) {
-        const row = {
-            data: getVal(fields[`data_${i}`]),
-            detalhe: getVal(fields[`detalhe_${i}`]),
-            tipo: getVal(fields[`tipo_${i}`]),
-            valor_despesa: parseFloat(getVal(fields[`valor_despesa_${i}`]) || 0),
-            km_rodado: parseFloat(getVal(fields[`km_rodado_${i}`]) || 0),
-            valor_unit_km: parseFloat(getVal(fields[`valor_unit_km_${i}`]) || 0),
-            cobrar_cliente: getVal(fields[`cobrar_cliente_${i}`]),
-            nome_cliente: getVal(fields[`nome_cliente_${i}`]) || '', // Captura o nome
-        };
-        
-        row.total_km = row.km_rodado * row.valor_unit_km;
-        row.total_gasto = row.valor_despesa + row.total_km;
-        
-        totalGeral += row.total_gasto;
-        tableRows.push(row);
+      const row = {
+        data: getVal(fields[`data_${i}`]),
+        detalhe: getVal(fields[`detalhe_${i}`]),
+        tipo: getVal(fields[`tipo_${i}`]),
+        valor_despesa: parseFloat(getVal(fields[`valor_despesa_${i}`]) || 0),
+        km_rodado: parseFloat(getVal(fields[`km_rodado_${i}`]) || 0),
+        valor_unit_km: parseFloat(getVal(fields[`valor_unit_km_${i}`]) || 0),
+        cobrar_cliente: getVal(fields[`cobrar_cliente_${i}`]),
+        nome_cliente: getVal(fields[`nome_cliente_${i}`]) || '',
+      };
+
+      row.total_km = row.km_rodado * row.valor_unit_km;
+      row.total_gasto = row.valor_despesa + row.total_km;
+
+      totalGeral += row.total_gasto;
+      tableRows.push(row);
     }
 
     const pdfBuffer = generatePDFBuffer(dados, tableRows);
 
     const attachments = [
-        {
-            filename: `Reembolso_${dados.solicitante.split(' ')[0]}.pdf`,
-            content: pdfBuffer,
-            contentType: 'application/pdf'
-        }
+      {
+        filename: `Reembolso_${dados.solicitante.split(' ')[0]}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }
     ];
 
-    const uploadedFiles = files.anexos; 
+    const uploadedFiles = files.anexos;
     if (uploadedFiles) {
-        const filesArray = Array.isArray(uploadedFiles) ? uploadedFiles : [uploadedFiles];
-        filesArray.forEach(file => {
-            attachments.push({
-                filename: file.originalFilename,
-                path: file.filepath
-            });
+      const filesArray = Array.isArray(uploadedFiles) ? uploadedFiles : [uploadedFiles];
+      filesArray.forEach(file => {
+        attachments.push({
+          filename: file.originalFilename,
+          path: file.filepath
         });
+      });
     }
 
     const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_SERVER_HOST,
-        port: process.env.EMAIL_SERVER_PORT,
-        secure: false,
-        auth: { user: process.env.EMAIL_SERVER_USER, pass: process.env.EMAIL_SERVER_PASSWORD },
+      host: process.env.EMAIL_SERVER_HOST,
+      port: process.env.EMAIL_SERVER_PORT,
+      secure: false,
+      auth: { user: process.env.EMAIL_SERVER_USER, pass: process.env.EMAIL_SERVER_PASSWORD },
     });
 
     await transporter.sendMail({
-        from: `"${dados.solicitante}" <${process.env.EMAIL_FROM}>`,
-        to: process.env.EMAIL_TO,
-        subject: `Reembolso/Pagto - ${dados.departamento} - ${dados.solicitante}`,
-        html: `<p>Nova solicitação recebida.</p><p><strong>Total:</strong> R$ ${totalGeral.toFixed(2)}</p>`,
-        attachments: attachments,
+      from: `"${dados.solicitante}" <${process.env.EMAIL_FROM}>`,
+      to: process.env.EMAIL_TO,
+      cc: dados.email_gestor, // <-- LINHA CORRIGIDA/ADICIONADA
+      subject: `Reembolso/Pagto - ${dados.departamento} - ${dados.solicitante}`,
+      html: `<p>Nova solicitação recebida.</p><p><strong>Total:</strong> R$ ${totalGeral.toFixed(2)}</p><p><strong>Gestor copiado:</strong> ${dados.email_gestor}</p>`,
+      attachments: attachments,
     });
 
     await enviarNotificacaoDiscord(dados, totalGeral);
